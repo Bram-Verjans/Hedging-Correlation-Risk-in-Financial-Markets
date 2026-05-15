@@ -6,3 +6,7 @@
 
 *.csv
 *.zip
+
+# renv
+renv/library/
+renv/staging/
