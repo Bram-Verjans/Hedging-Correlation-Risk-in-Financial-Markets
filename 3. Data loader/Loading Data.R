@@ -1,14 +1,17 @@
 data = NULL
 zcb = NULL
-
-years <- c(2008, 2009, 2010) 
-months <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")
+#years <- c(2008, 2009, 2010) 
+#months <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")
 
 base_path <- dirname(getwd())
 
+#------------------------- 
+# Load option data and zero coupon data.
+#-------------------------
+
 for(year in years)
 {
-  year_folder <- file.path(base_path, "1. Raw option data", year)
+  year_folder <- file.path(base_path, "2. Raw option data", year)
   zcb_name <- file.path(year_folder,paste0("zerocd_",year,".csv"))
 
   for(month in months)
@@ -20,8 +23,12 @@ for(year in years)
   zcb = bind_rows(zcb,as.data.frame(read.csv2(zcb_name, sep=",", header = T, dec = ".")))
 }
 
-#weights for all years is stored in each file, so we only need to load one .csv:
-weights_folder <- file.path(base_path, "1. Raw option data", year) # uses the last year (2010)
+#------------------------- 
+# Load weights.
+#-------------------------
+
+#weights for all years are stored in each weights file, so we only need to load one:
+weights_folder <- file.path(base_path, "2. Raw option data", year) # uses the last year (2010)
 weights_full_path <- file.path(weights_folder, paste0("weights_", year, ".csv"))
 
 print(paste("Loading weights from:", weights_full_path))

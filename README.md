@@ -11,11 +11,24 @@ This repository is made as a central location where the code can be found to rec
 
 ### 3. '3. Data loader / Loading Data.R'
 
-#### General
-- Loads and combines the raw option data, zero-coupon bond data, and portfolio weights for 2008–2010.  
-  The script also converts Excel serial dates to R date format.
+#### Purpose
+Loads and combines the raw option data, zero-coupon bond data, and portfolio weights for 2008–2010. 
+This file is intended to be sourced by other scripts and is not executed standalone.
 
-  This file is intended to be sourced by other scripts and is not executed standalone.
+#### Inputs
+- `optdata_<YYYY>_<M>.csv`
+- `zerocd_<YYYY>.csv`
+- `weights_<YYYY>.csv`
+
+#### Outputs
+- `data`
+- `zcb`
+- `weights`
+
+### 4. '4. Model-free vs realized correlation / Model-Free Implied Correlation.R'
+
+#### Purpose
+
 
 #### Inputs
 - `optdata_<YYYY>_<M>.csv`

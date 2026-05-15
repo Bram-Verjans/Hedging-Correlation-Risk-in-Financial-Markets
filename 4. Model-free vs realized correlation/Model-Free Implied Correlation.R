@@ -6,6 +6,7 @@ library(tidyverse)
 
 #------------------------- 
 #Input: Change maturity between 30 and 90 days to obtain the results from the paper.
+#Possible to take less months or years into account.
 #-------------------------
 
 #Example of variables
@@ -14,12 +15,12 @@ months = c("1","2","3","4","5","6","7","8","9","10","11","12")
 years = c("2008","2009","2010")
 
 #------------------------- 
-#Data Loader: Load the relevant option data to do the analysis on. 
+#Data Loader: Load the relevant option data using 'Loading Data.R'. 
 #-------------------------
 
 #the following program loads datasets: data, weights, zcb
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-setwd("../Data loader")
+setwd("../3. Data loader")
 source("Loading Data.R")
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
@@ -49,8 +50,9 @@ df_interest_rate <- zcb %>%
 #-------------------------
 #Step 0.2: Determining forward prices: using different clean data set with ATM call and put options.
 #-------------------------
-
-#Step 0.2.1: Define helper functions to extract Call (EC) and Put (EP) prices based on Delta sign
+#To check
+#Step 0.2.1: Define helper functions to extract the European Call (EC) 
+#and European Put (EP) option prices.
 EP_no_warning <- function(midquote,delta){
   x = midquote[delta<0]
   return(ifelse(length(x)>0,first(x),NA))
@@ -60,7 +62,7 @@ EC_no_warning <- function(midquote,delta){
   return(ifelse(length(x)>0,first(x),NA))
 }
 
-#Step 0.2.2: Calculate forward prices 
+#Step 0.2.2: Calculate forward prices using put-call parity
 df_forward <- data_cleaned %>%
   left_join(df_interest_rate, by = c("quote_date")) %>%
   group_by(quote_date,security_ID,expiration,strike_price,interest_rate) %>%
@@ -97,7 +99,8 @@ df_forward <- df_forward %>%
 #-------------------------
 #Step 1: Create main table (df_main_int)
 #-------------------------
-#Attributes as follows:
+
+#Attributes in the dataframe are as follows:
 #quote_date
 #interest_rate
 #security_ID
@@ -111,13 +114,10 @@ df_forward <- df_forward %>%
 #with expiration only the slice before and after the given maturity
 
 
-#Step 1.1: clean data further
-#OTM-options
+# Step 1.1: Further clean the option dataset by keeping only OTM options,
+# filtering maturities, and retaining only option slices with more than two strikes.
 data_cleaned = data_cleaned[(data_cleaned["delta"]< 0.5 & data_cleaned["delta"]>-0.5),]
-# Filter out short and long maturities
 data_cleaned = data_cleaned[data_cleaned["expiration"]>=7 & data_cleaned["expiration"]<=maturity +200,]
-# Only keep maturities with more than two strikes
-
 data_cleaned <- data_cleaned %>%
   group_by(security_ID, quote_date, expiration) %>%
   filter(n() > 2) %>%
@@ -141,7 +141,7 @@ df_main_int <- data_cleaned %>%
   ) %>%
   ungroup()
 
-#Step 1.3: Again pivot the option prices in two columns EC and EP
+#Step 1.3: Pivot the option prices into two columns EC and EP
 dummy <- data.frame(id=c(1,2))
 df_main_int <- df_main_int %>%
   cross_join(dummy) %>%
@@ -165,7 +165,7 @@ df_main_int <- df_main_int %>%
 #MFIV_near
 #MFIV_next
 
-#Final data prep:
+# Step 2.1: Final data prep:
 # 1. we only use strikes for which we have a call price in case K>K0 and a put in case K< K0
 # 2. We require any day/maturity has at least 3 Puts and 3 Calls to keep it reliable.
 
@@ -183,8 +183,8 @@ df_main <- df_main_int %>%
   )) %>%
   filter(!is.na(Q))
 
-# This function calculates the area under the option price curve.
-# It uses 'DK' to find the distance between strikes (the width of each slice)
+#To check
+# Helper function calculates the model-free implied variance (MFIV).
 MFIV_f <- function(K,FT,K0,Q,r,Texp)
 {
   n=length(K)
@@ -204,6 +204,7 @@ MFIV_f <- function(K,FT,K0,Q,r,Texp)
   return(max(0,exp(r_val*Texp_val)/Texp_val*2*sum(Q*DK/K^2) -1/Texp_val*(1-FT_val/K0_val)^2))
 }
 
+#Step 2.2: Calculate the MFIV for each security, quote date and maturity.
 df_MFIV <- df_main %>%
   group_by(security_ID, quote_date,expiration) %>%
   arrange(strike_price, .by_group = TRUE) %>%
@@ -212,7 +213,7 @@ df_MFIV <- df_main %>%
     .groups = "drop"
   )
 
-#pivoting results in near and next columns
+#Step 2.3: Pivot the dataframe to have separate columns for the nearest maturity and next maturity. 
 df_MFIV <- df_MFIV %>%
   cross_join(dummy) %>%
   group_by(security_ID, quote_date) %>%
@@ -230,15 +231,19 @@ df_MFIV <- df_MFIV %>%
 #-----------------------------------------
 #Step 3: Pulling forward missing variances
 #-----------------------------------------
-#Due to illiquid data, it is possible that not all securities have a calculated MFIV above (because too few option data was available)
+#Due to illiquid data, it is possible that not all securities have a calculated MFIV above (because too few option data were available).
 
-#Step 3.1: We first create a table 'days_and_securities' as follows
+#Step 3.1: We first create a table 'days_and_securities'
+#containing all trading days and all security_ID's in the DOJ for that date. 
+#With the following columns.
 #quote_date
 #security_ID
-#containing all trading days and all security_ID's in the DOJ for that date
+
+
 period <- data %>% mutate(quote_date = as.Date(quote_date, origin = "1899-12-31")) %>% distinct(quote_date)
 
 #weights were loaded by the data loader
+#security_ID = 102456 is the index itself.
 Index <- weights %>% distinct(quote_date) %>% mutate(security_ID = 102456)
 security_IDs <- weights %>% bind_rows(Index)
 
@@ -247,7 +252,8 @@ days_and_securities <- period %>%
   inner_join(security_IDs, by = c("quote_date")) %>%
   select(quote_date,security_ID)
 
-#Step 3.2: gather base data
+#To check
+#Step 3.2: add the nearest and next MFIV data.
 df_MFIV_full <- days_and_securities %>%
   left_join(df_MFIV, by = c("quote_date","security_ID"))
 
