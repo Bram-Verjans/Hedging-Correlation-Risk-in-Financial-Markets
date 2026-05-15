@@ -1,8 +1,3 @@
-# Hedging-Correlation-Risk-in-Financial-Markets
-This repository is made as a central location where the code can be found to recreate the results for the thesis 'Hedging Correlation Risk in Financial Markets', by Bram Verjans and Ivo De Brabandere
+# Ouptuts folder
 
-
-## General Workflow
-1. '1. Package installer/ Package Installer.R'
-- inputs:
-- outputs:
+This folder is used as output folder for all '.csv' files constructed by R-files in the folder '5. Implied correlation per moneyness' when maturity is put to 30.
