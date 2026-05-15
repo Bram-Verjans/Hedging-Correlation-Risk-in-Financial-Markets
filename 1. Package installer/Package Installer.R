@@ -1,0 +1,7 @@
+install.packages("lubridate")
+install.packages("ggplot2")
+install.packages("dplyr")
+install.packages("jsonlite")
+install.packages("patchwork")
+install.packages("rstudioapi")
+install.packages("tidyr")
