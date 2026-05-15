@@ -1,3 +1,12 @@
+#------------------------- General Purpose -------------------------
+# This file computes the model-free implied correlation (MFIC) as is shown in 
+# section 2.3.1 of the thesis.
+# To obtain the output necessary for other files run this script twice,
+# Using
+#   All months in 2008, 2009 and 2010, and
+#   maturity = 30 and
+#   maturity = 90.
+
 library(lubridate)
 library(ggplot2)
 library(dplyr)
@@ -6,11 +15,11 @@ library(tidyverse)
 
 #------------------------- 
 #Input: Change maturity between 30 and 90 days to obtain the results from the paper.
-#Possible to take less months or years into account.
+#It is possible to take less months or years into account.
 #-------------------------
 
 #Example of variables
-maturity = 30 #We define maturity to target options with roughly the same maturity
+maturity = 90 #We define maturity to target options with roughly the same maturity
 months = c("1","2","3","4","5","6","7","8","9","10","11","12")
 years = c("2008","2009","2010")
 
@@ -164,6 +173,7 @@ df_main_int <- df_main_int %>%
 #T_next
 #MFIV_near
 #MFIV_next
+#For each combination of security and quote_date
 
 # Step 2.1: Final data prep:
 # 1. we only use strikes for which we have a call price in case K>K0 and a put in case K< K0
@@ -228,9 +238,9 @@ df_MFIV <- df_MFIV %>%
 
 
 
-#-----------------------------------------
+#-------------------------
 #Step 3: Pulling forward missing variances
-#-----------------------------------------
+#-------------------------
 #Due to illiquid data, it is possible that not all securities have a calculated MFIV above (because too few option data were available).
 
 #Step 3.1: We first create a table 'days_and_securities'
@@ -257,7 +267,7 @@ days_and_securities <- period %>%
 df_MFIV_full <- days_and_securities %>%
   left_join(df_MFIV, by = c("quote_date","security_ID"))
 
-# INTERMEZZO: Graphical representation of data quality
+# --- INTERMEZZO: Graphical representation of data quality ---
 df_heatmap <- df_MFIV_full %>%
   mutate(
     #Calculate relative interpolation error compared to twice the interpolation with a point at halve maturity/365 distance
@@ -269,7 +279,7 @@ df_heatmap <- df_MFIV_full %>%
     )
 
 
-# 3. Plot using the scaled error
+# Plot using the scaled error
 pl_heatmap <- ggplot(df_heatmap, aes(x = quote_date, y = as.factor(security_ID), fill = error_scaled)) +
   geom_tile() +
   scale_fill_gradient(low = "#1FABD5", 
@@ -292,15 +302,15 @@ pl_heatmap <- ggplot(df_heatmap, aes(x = quote_date, y = as.factor(security_ID),
 print(pl_heatmap)
 
 
-assign(paste0("pl_heatmap_", year,"_",month), pl_heatmap)
+assign(paste0("pl_heatmap_", year,"_",month,"_M",maturity), pl_heatmap)
 output_path <- "Figures"
-image_name = paste0(output_path,"/pl_heatmap_",year,"_",month,".png")
+image_name = paste0(output_path,"/INTERMEZZO_heatmap_",year,"_",month,"_M",maturity,".png")
 ggsave(image_name, plot=pl_heatmap, height =4.5)
 rm(pl_heatmap) #Clean up pl_heatmap
-#END OF INTERMEZZO
+# --- END OF INTERMEZZO ---
 
 
-# Step 3.3: Pulling variance forward and removing still missing values
+# Step 3.3: Pulling variance forward and removing missing values
 df_MFIV_pulled <- df_MFIV_full %>%
   arrange(security_ID, quote_date) %>%
   group_by(security_ID) %>%
@@ -309,12 +319,14 @@ df_MFIV_pulled <- df_MFIV_full %>%
   filter(!is.na(MFIV_near) & !is.na(MFIV_next))
 
 
-#-----------------------------------------------------
+#-------------------------
 #Step 4: Compute model free implied correlation (MFIC) 
-#-----------------------------------------------------
+#-------------------------
+#To check
 #Result will be a table containing:
 #quote_date
-#MFIC
+#Maturity information
+#MFIV information 
 
 df_MFIV_interpolated <- df_MFIV_pulled %>%
   mutate(MFIV_maturity =case_when(
@@ -334,9 +346,9 @@ df_MFIV_interpolated <- df_MFIV_pulled %>%
   ))
   
 
-#-------------------------------------------------------
-#Step 4: The weights comprising the index DOJ are loaded
-#-------------------------------------------------------
+#-------------------------
+#Step 5: The weights comprising the index DOJ are loaded
+#-------------------------
 
 df_divisor_DJIA <- weights %>%
   mutate(quote_date = as.Date(quote_date, origin = "1899-12-31")) %>%
@@ -356,10 +368,11 @@ weights <- df_MFIV_interpolated %>%
   ungroup() %>%
   select(quote_date,security_ID,weight)
 
+#Combine the earlier result with the weights
 df_main <- df_MFIV_interpolated %>% left_join(weights, by = c("quote_date","security_ID")) %>% select(security_ID, quote_date, weight, MFIV_maturity)
-#----------------------------------------------------
-#Step 5: Computing the model-free implied correlation
-#----------------------------------------------------
+#-------------------------
+#Step 6: Computing the model-free implied correlation
+#-------------------------
 
 df_index <- df_main %>%
   filter(security_ID == 102456) %>%
@@ -381,6 +394,11 @@ df_implied_corr <- df_components %>%
     },
     .groups = "drop"
   )
+
+#-------------------------
+#Step 7: Writing output
+#-------------------------
+
 target_dir <- paste0("Data/", maturity)
 setwd(target_dir)
 output_name <- paste0("Model_Free_Implied_Correlation_M", maturity, ".csv")

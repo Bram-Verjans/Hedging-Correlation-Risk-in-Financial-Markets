@@ -25,17 +25,16 @@ This file is intended to be sourced by other scripts and is not executed standal
 - `zcb`
 - `weights`
 
-### 4. '4. Model-free vs realized correlation / Model-Free Implied Correlation.R'
+### 4. `4. Model-free vs realized correlation / Model-Free Implied Correlation.R`
 
 #### Purpose
 
+This file computes the model-free implied correlation (MFIC) as is shown in section 2.3.1 of the thesis.
 
 #### Inputs
-- `optdata_<YYYY>_<M>.csv`
-- `zerocd_<YYYY>.csv`
-- `weights_<YYYY>.csv`
+- The option data loaded using the `Loading Data.R`
 
 #### Outputs
-- `data`
-- `zcb`
-- `weights`
+- `Model_Free_Implied_Correlation_M<Mat>.csv`
+- `INTERMEZZO_heatmap_2010_12_M<Mat>.png`
+with '<Mat>' depicting the maturity specified.

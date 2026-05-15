@@ -1,7 +1,5 @@
 data = NULL
 zcb = NULL
-#years <- c(2008, 2009, 2010) 
-#months <- c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12")
 
 base_path <- dirname(getwd())
 
