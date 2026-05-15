@@ -6,5 +6,3 @@ This repository is made as a central location where the code can be found to rec
 1. '1. Package installer/ Package Installer.R'
 - inputs:
 - outputs:
-
-2. 
