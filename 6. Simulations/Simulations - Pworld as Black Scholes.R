@@ -1,4 +1,22 @@
+#------------------------- General Purpose -------------------------
+# This file supports the analysis from Chapter 5 in the thesis. 
 
+#------------------------- !! Important !! -------------------------
+# To specifically obtain the figures from the thesis:
+#   For figure 9 and 10 put:
+#     d = 2 and 10
+#     optiontype = "straddle" and "log"
+#     nscenarios = 500
+#     for_fig_11 = FALSE
+#     run up to line 400
+#     It will automatically take only the first 10 scenario's to plot figure 9.
+#     After running all 4 scenario's, run lines 401 - 469 to make and save the figures.
+#   For figure 11:
+#     d = 10
+#     optiontype = "straddle"
+#     nscenarios = 10
+#     for_fig_11 = TRUE
+#     run all lines
 
 library(ggplot2)
 library(dplyr)
@@ -15,14 +33,17 @@ d = 10
 #Nr of trading days in 1 year
 nT = 252
 #Nr of scenario's 
-nscenarios = 500
+nscenarios = 10
 #Maturity of the option (in years)
 maturity= 1
 #Type of hedge, can only be 'gamma'
 greek_hedge = "gamma"
 #The type of option, could be 'log' for a log-contract or 'straddle', for a straddle option.
 optiontype = "straddle"
-
+#Are the runs to obtain figure 11 from the thesis, put this to TRUE, 
+#if it is to obtain figures 9 and 10 put it to FALSE.
+#To obtain no particular figure, but for the analysis put it to TRUE.
+for_fig_11 = TRUE
 
 r=0.02
 mu = 0.5
@@ -69,7 +90,6 @@ EulerMaruyama_integrator <- function()
     stocksim[,i+1,sim] = stocksim[,i,sim]*exp((r-ivP^2/2)*dt+ivP*sqrt(dt)*W[sim,])
     }
   }
-  
   return(list(S = stocksim))
 }
 
@@ -283,6 +303,10 @@ df_PNL <- df_PNL %>%
   mutate(cumulative_PNL = cumsum(PNL_realized)) %>%
   ungroup()
 
+#--------------------------------
+# Plotting all scenario's ran.
+#--------------------------------
+
 ggplot(df_PNL, aes(x = time, y = cumulative_PNL, color = scenario, group = scenario)) +
   # Realized P&L Lines for all scenarios
   geom_line(alpha = 0.6, size = 0.8) + 
@@ -296,13 +320,12 @@ ggplot(df_PNL, aes(x = time, y = cumulative_PNL, color = scenario, group = scena
   theme_minimal() +
   theme(legend.position = "right")
 
+#--------------------------------
+# Preparing for figure 9. (only plotting up to scenario 10)
+#--------------------------------
 
 df_PNL_filtered <- df_PNL %>%
   filter(scenario <= 10)
-
-
-
-
 
 pl_evol <- ggplot(df_PNL_filtered, aes(x  = time, y = cumulative_PNL, group = scenario)) + 
   geom_line(aes(colour = scenario), linewidth = 0.5, linetype = 1) +
@@ -313,7 +336,8 @@ pl_evol <- ggplot(df_PNL_filtered, aes(x  = time, y = cumulative_PNL, group = sc
     axis.ticks = element_line(color = "black"),panel.grid.minor = element_blank()
   )
 
-
+assign(paste0("pl_evol_",optiontype, d),pl_evol)
+print(paste0("pl_evol_",optiontype, d))
 
 #------------------------------------------------------------
 # Comparing with difference realized and implied correlations
@@ -344,8 +368,9 @@ df_tot_PNL <- df_PNL %>%
 df_scatter_plot <- df_tot_PNL %>%
   inner_join(df_diff_cov, by = c("scenario"))
 
-
-
+#--------------------------------
+# Preparing figure 10.
+#--------------------------------
 
 pl_cummul <- ggplot(df_scatter_plot, aes(x = diff_impl_real_cov, y = cumulative_PNL)) +
   geom_point(alpha = 0.5, color = "#00407A", size = 0.15) + 
@@ -362,51 +387,90 @@ pl_cummul <- ggplot(df_scatter_plot, aes(x = diff_impl_real_cov, y = cumulative_
     axis.ticks = element_line(color = "black"),panel.grid.minor = element_blank()
   )
 
-
-
-plot_time <- paste0("pl_time_",optiontype, d)
+plot_time <- paste0("pl_evol_",optiontype, d)
 plot_cumul <- paste0("pl_scatter_",optiontype, d)
+
 assign(plot_time,pl_evol)
 assign(plot_cumul,pl_cummul)
 
+print(paste0("pl_scatter_",optiontype, d))
+print(paste0("pl_evol_",optiontype, d))
+
+get(paste0("pl_scatter_",optiontype, d))
+get(paste0("pl_evol_",optiontype, d))
+
 #------------------------- 
-#Constructing the plot from the paper, make sure to have run up to line 365 for the following 4 scenarios.
+# Constructing figures 9 and 10 from the paper, make sure to have run up to line 397 for the following 4 scenarios.
 # Log-contract (optiontype) with 2 assets (d).
 # Log-contract (optiontype) with 10 assets (d).
 # Straddle-contract (optiontype) with 2 assets (d).
 # Straddle-contract (optiontype) with 10 assets (d).
-#All 4 should be in memory.
+# All 4 should be in memory.
+# When all 4 are in memory, run up to 469 to obtain figure 9 and 10.
 #-------------------------
 
+if (!for_fig_11) {
+  #-------------------------
+  # Figure 9
+  #-------------------------
+  
+  #Test if everything is loaded properly
+  pl_evol_log2
+  pl_evol_log10
+  pl_evol_straddle2
+  pl_evol_straddle10
+  
+  # Combine plots: (Top Row) / (Bottom Row)
+  combined_plot <- ((pl_evol_log2) + pl_evol_log10) / 
+    ((pl_evol_straddle2)+ pl_evol_straddle10) + 
+    plot_annotation(tag_levels = 'a')
+  
+  # Display the result
+  combined_plot
+  
+  #Save the result for figure 9
+  setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+  setwd(paste0("Figures"))
+  ggsave('Figure9_log2log10straddle2straddle10_evol.png', 
+         plot=combined_plot,
+         width = 6.5,
+         height = 5,
+         units = "in",   
+         dpi = 300       
+  )
+  
+  #-------------------------
+  # Figure 10
+  #-------------------------
+  
+  #test if all 4 scenario's are in memory.
+  pl_scatter_log2
+  pl_scatter_log10
+  pl_scatter_straddle2
+  pl_scatter_straddle10
+  
+  # Combine plots: (Top Row) / (Bottom Row)
+  combined_plot <- ((pl_scatter_log2 +scale_x_continuous(breaks = c(0.006,0.009, 0.012,0.015,0.018))) + pl_scatter_log10) / 
+    ((pl_scatter_straddle2 +scale_x_continuous(breaks = c(0.006,0.009, 0.012,0.015,0.018)))+ pl_scatter_straddle10) + 
+    plot_annotation(tag_levels = 'a')
+  
+  # Display the result
+  combined_plot
+  
+  setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+  setwd(paste0("Figures"))
+  ggsave('Figure10_log2log10straddle2straddle10_scatter.png', 
+         plot=combined_plot,
+         width = 6.5,
+         height = 5,
+         units = "in",   
+         dpi = 300       
+    )
+}
 
-#test if all 4 scenario's are in memory.
-pl_time_log2
-pl_time_log10
-pl_time_straddle2
-pl_time_straddle10
-
-
-
-# Combine plots: (Top Row) / (Bottom Row)
-combined_plot <- ((pl_scatter_log2 +scale_x_continuous(breaks = c(0.006,0.009, 0.012,0.015,0.018))) + pl_scatter_log10) / 
-  ((pl_scatter_straddle2 +scale_x_continuous(breaks = c(0.006,0.009, 0.012,0.015,0.018)))+ pl_scatter_straddle10) + 
-  plot_annotation(tag_levels = 'a')
-
-# Display the result
-combined_plot
-
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-setwd(paste0("Figures"))
-ggsave('Figure10_log2log10straddle2straddle10_scatter.png', 
-       plot=combined_plot,
-       width = 6.5,
-       height = 5,
-       units = "in",   
-       dpi = 300       
-)
-
-
+#-------------------------
 # Analysis of returns
+#-------------------------
 
 #1. Single index model / CAPM
 df_CAPM <- df_PNL %>%
@@ -416,6 +480,10 @@ df_CAPM <- df_PNL %>%
 capm_model <- lm(Re ~ RMe, data = df_CAPM)
 
 summary(capm_model)
+
+#-------------------------
+# Prepare for figure 11.
+#-------------------------
 
 pl_capm <- ggplot(df_CAPM, aes(x = RMe*100, y =Re*100)) +
   geom_point(alpha = 0.5, color = "#00407A", size = 0.2) +
@@ -462,10 +530,13 @@ pl_analysis <- (pl_real_vs_theor + pl_capm)
 # Display the result
 print(pl_analysis)
 
+# Save the result
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd(paste0("Figures"))
 ggsave('Figure11_Simulations_Analysis.png', 
 plot=pl_analysis,
 width = 7,
 height = 3.5,
-units = "in",   # Always specify inches
-dpi = 300       # High resolution for printing
+units = "in", 
+dpi = 300     
 )

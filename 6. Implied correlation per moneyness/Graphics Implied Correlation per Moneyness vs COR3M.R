@@ -1,3 +1,11 @@
+#------------------------- General Purpose -------------------------
+# This file constructs figure 7 from the thesis, using the outputs: 
+#   `Implied correlation per moneyness_M<Mat> - ATM.csv` from Implied Correlation per Moneyness.R
+#   `COR3M Data` in `2. Raw option input`
+
+#------------------------- !! Important !! -------------------------
+# To obtain the figure from the thesis, run using maturity = 90.
+
 library(lubridate)
 library(ggplot2)
 library(dplyr)
@@ -8,10 +16,8 @@ library(patchwork)
 #------------------------- 
 #Input: Change maturity between 30 and 90 days to obtain the results from the paper.
 #-------------------------
-maturity = 90
 
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-setwd("Data")
+maturity = 30
 
 #------------------------- 
 #Data Loader: Load the calculated implied correlations, 
@@ -33,7 +39,7 @@ df_implied_cor <- df_implied_cor %>% mutate(correlation = rho_iv, quote_date = a
 # 1. Load the data
 # Note: Cboe data often nests the actual values inside a "data" or "values" key
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-setwd(paste0("../1. Raw option data/COR3M Data"))
+setwd(paste0("../2. Raw option data/COR3M Data"))
 raw_json <- fromJSON("COR3M (CBOE).json")
 df <- raw_json$data
 
@@ -122,8 +128,7 @@ assign(
 print(get(paste0("pl", maturity)))
 
 #------------------------- 
-#Constructing the plot from the paper, make sure to have run up to line 97 for maturity 90.
-#Maturity 90 should be in memory.
+#Constructing the plot from the paper.
 #-------------------------
 
 top_row <- get(paste0("pl", maturity)) + plot_layout(guides = "collect") & common_scale & theme(legend.position = "bottom")

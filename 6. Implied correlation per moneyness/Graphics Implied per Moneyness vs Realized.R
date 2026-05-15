@@ -1,14 +1,25 @@
+#------------------------- General Purpose -------------------------
+# This file constructs figure 6 from the thesis, using the outputs: 
+#   `Implied correlation per moneyness_M<Mat> - ATM.csv` from Implied Correlation per Moneyness.R
+#   `Realized_Correlation_M<Mat>.csv` from Realized Correlation.R
+
+#------------------------- !! Important !! -------------------------
+# To obtain the figure run this script up to line 108 for,
+#   maturity = 30 and
+#   maturity = 90,
+# before running the last lines.
+
 library(lubridate)
 library(ggplot2)
 library(dplyr)
 library(patchwork)
 #detach("package:MASS", unload = TRUE)
 
-
 #------------------------- 
 #Input: Change maturity between 30 and 90 days to obtain the results from the paper.
 #-------------------------
-maturity = 90
+
+maturity = 30
 
 #------------------------- 
 #Data Loader: Load the calculated implied and realized correlations, 
@@ -23,7 +34,7 @@ df_implied_cor <- df_implied_cor %>% arrange(quote_date)
 df_implied_cor <- df_implied_cor %>% rename(correlation = rho_iv) %>% select(quote_date, correlation)
 
 #loading realized correlations
-df_realized_cor <- as.data.frame(read.csv2(paste0("../../../Model-free vs realized correlation/Data/",maturity,"/Realized_Correlation_M",maturity,".csv"),sep=";", dec=","))
+df_realized_cor <- as.data.frame(read.csv2(paste0("../../../4. Model-free vs realized correlation/Data/",maturity,"/Realized_Correlation_M",maturity,".csv"),sep=";", dec=","))
 df_realized_cor <- df_realized_cor %>% rename(correlation = realized_cor)
 
 #------------------------- 
@@ -97,7 +108,7 @@ assign(
 print(get(paste0("pl", maturity)))
 
 #------------------------- 
-#Constructing the plot from the paper, make sure to have run up to line 97 for both maturities.
+#Constructing the plot from the paper, make sure to have run up to line 108 for both maturities.
 #Both maturity 30 and 90 should be in memory
 #-------------------------
 

@@ -1,12 +1,25 @@
+#------------------------- General Purpose -------------------------
+# computing the P&L of a delta-hedging strategy
+
+#------------------------- !! Important !! -------------------------
+# To obtain all necessary data for the following scripts,
+# Run this entire script for the following scenarios:
+# - Maturity = 30 and 90,
+# - greek_hedge = 'gamma' and 'vega',
+# - delta_type = 'delta' and 'delta_sticky',
+# A total of 8 scenarios should be ran.
+
 library(lubridate)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
 library(patchwork)
 #detach("package:MASS", unload = TRUE)
+
 #-------------------------------
 #Input
 #-------------------------------
+
 #To obtain the results from the thesis, maturity can be put to 30 days or 90 days.
 #We define maturity to target options with roughly the same maturity
 maturity = 30
@@ -22,7 +35,7 @@ years = c("2008","2009","2010")
 # Step 0: loading/preparing data
 #-------------------------------
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-setwd("../Data loader")
+setwd("../3. Data loader")
 source("Loading Data.R")
 
 #-------------------------------
@@ -110,12 +123,19 @@ df_CAPM <- df_PNL %>%
 capm_model <- lm(Re ~ RMe, data = df_CAPM)
 multi_factor_model <-lm(Re ~ RMe+Re_theoretical, data = df_CAPM)
 
+#-------------------------------
+# Step 3: Summarizing statistics
+#-------------------------------
+
 # View the full summary (Coefficients, R-squared, p-values)
 mean(df_PNL$PNL_realized)
 summary(capm_model)
 cat("Single index model: \n", "Alpha", capm_model$coefficients[1]*annualization_factor, "Beta", capm_model$coefficients[2])
 
-# Defining plot
+#-------------------------------
+# Step 4: Preparing correct settings for figure 11.
+#-------------------------------
+
 Sys.setlocale("LC_TIME", "English")
 plmaturity <- ggplot(df_PNL_one_column, aes(x = quote_date, y = PNL, color = as.factor(ID), group = ID,linetype = as.factor(ID))) +
   geom_line(linewidth = 0.5) + 
@@ -182,7 +202,7 @@ print(get(paste0("pl", maturity)))
 
 #loading implied correlations
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-setwd(paste0("../Implied correlation per moneyness/Data/",maturity))
+setwd(paste0("../6. Implied correlation per moneyness/Data/",maturity))
 df_implied_cor <-as.data.frame(read.csv2(paste0("Implied correlation per moneyness_M",maturity," - ATM.csv"),sep=";", dec=","))
 df_implied_cor <- df_implied_cor %>% arrange(quote_date)
 df_implied_cor <- df_implied_cor %>% rename(correlation = rho_iv)

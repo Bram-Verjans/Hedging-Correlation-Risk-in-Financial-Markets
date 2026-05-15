@@ -1,6 +1,6 @@
 #------------------------- General Purpose -------------------------
-# This file computes the model-free implied correlation (MFIC) as is shown in 
-# section 2.3.1 of the thesis.
+# This file computes the model-free implied correlation (MFIC) as is explained in 
+# section 2.3.2 of the thesis.
 # To obtain the output necessary for other files run this script twice,
 # Using
 #   All months in 2008, 2009 and 2010, and

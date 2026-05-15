@@ -1,3 +1,15 @@
+#------------------------- General Purpose -------------------------
+# This file constructs figure 5 from the thesis, using the outputs: 
+#   `Model_Free_Implied_Correlation_M<Mat>.csv` from Model-Free Implied Correlation.R
+#   `Realized_Correlation_M<Mat>.csv` from Realized Correlation.R
+
+#------------------------- !! Important !! -------------------------
+# To obtain the figure run this script up to line 112 for,
+#   maturity = 30 and
+#   maturity = 90,
+# before running the last lines.
+
+
 library(lubridate)
 library(ggplot2)
 library(dplyr)
@@ -8,7 +20,7 @@ library(patchwork)
 #------------------------- 
 #Input: Change maturity between 30 and 90 days to obtain the results from the paper.
 #-------------------------
-maturity = 30
+maturity = 90
 
 #------------------------- 
 #Data Loader: Load the calculated implied and realized correlations, 
@@ -100,7 +112,7 @@ assign(
 print(get(paste0("pl", maturity)))
 
 #------------------------- 
-#Constructing the plot from the paper, make sure to have run up to line 100 for both maturities.
+#Constructing the plot from the paper, make sure to have run up to line 112 for both maturities.
 #Both maturity 30 and 90 should be in memory
 #-------------------------
 

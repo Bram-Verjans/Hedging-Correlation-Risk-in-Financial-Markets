@@ -1,3 +1,11 @@
+#------------------------- General Purpose -------------------------
+# This file computes the realized correlation (RC) as is explained in 
+# section 2.3.1 of the thesis.
+# To obtain the output necessary for other files run this script twice,
+# Using
+#   maturity = 30 and
+#   maturity = 90.
+
 library(lubridate)
 library(ggplot2)
 library(dplyr)
@@ -7,15 +15,15 @@ library(tidyverse)
 #------------------------- 
 #Input: Change maturity between 30 and 90 days to obtain the results from the paper.
 #-------------------------
-maturity = 30
+maturity = 90
 
 
 #------------------------- 
 #Data Loader: We only need the weights in the DOJ here.
 #-------------------------
-# The dataset with the weights is the same for every year, so we only take the one in the '2008' folder.
+# The dataset with weights is the same for every year, so we only take the one in the '2008' folder.
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-setwd("../1. Raw option data/2008")
+setwd("../2. Raw option data/2008")
 weights_name <- "weights_2008.csv"
 
 weights = as.data.frame(read.csv2(weights_name, sep=",", header = T, dec = "."))
@@ -24,7 +32,7 @@ weights <- weights %>% mutate(quote_date = as.Date(quote_date, origin = "1899-12
 #------------------------- 
 #Step 1: Calculate daily returns and weights.
 #-------------------------
-#Calculate daily stock returns and corresponding index weights
+#Calculate daily stock returns and corresponding scaled index weights
 returns <- weights %>%
   group_by(security_ID) %>%
   arrange(quote_date) %>%
@@ -45,7 +53,7 @@ period <- returns %>% select(quote_date) %>% filter(year(quote_date) %in% c(2008
 #Step 2: Create rolling future return windows by linking each quote date.
 #-------------------------
 
-# to all stock returns within the selected maturity period.
+# Construct rolling maturity return windows
 # Remove stocks with incomplete observations to ensure a balanced sample.
 df_returns_joined <- returns %>%
   mutate(end_date = quote_date + maturity-1) %>%
@@ -96,7 +104,7 @@ output_name <- paste0("Data/",maturity,"/Realized_Correlation_M",maturity,".csv"
 write.table(realized_cor, output_name, row.names = FALSE,sep=";",dec=",")
 
 #------------------------- 
-#Extra: plotting
+#Extra: Plot of the realized correlation trend
 #-------------------------
 
 ggplot(realized_cor, aes(x = quote_date, y = realized_cor)) +

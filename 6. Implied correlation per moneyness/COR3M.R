@@ -1,13 +1,20 @@
+#------------------------- General Purpose -------------------------
+# This file constructs figure 3 from the thesis, using the COR3M Data in '2. Raw option input'. 
+
+library(jsonlite)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+library(tidyquant)
+
 #---------------------------------------------------
 #Plotting COR3M (CBOE implied correlation, 3 months)
 #---------------------------------------------------
 #.json comes from https://www.cboe.com/us/indices/dashboard/cor3m/ by right-mouse clicking "inspect" (ask Gemini for specifics)
 
-setwd("C:/Users/bramv/Documents/Universiteit/2025-2026/Master thesis/Data")
-library(jsonlite)
-library(ggplot2)
-library(dplyr)
-library(lubridate)
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd("../2. Raw option data/COR3M Data")
+
 
 # 1. Load the data
 # Note: Cboe data often nests the actual values inside a "data" or "values" key
@@ -24,11 +31,11 @@ df_clean <- df %>%
     low   = as.numeric(low)
   )
 
-output_name <-"C:/Users/bramv/Documents/Universiteit/2025-2026/Master thesis/Data/COR3M.csv"
-write.table(df_clean, output_name, row.names = FALSE,sep=";",dec=",")
+#output_name <-"C:/Users/bramv/Documents/Universiteit/2025-2026/Master thesis/Data/COR3M.csv"
+#write.table(df_clean, output_name, row.names = FALSE,sep=";",dec=",")
 
 
-library(tidyquant)
+
 
 pl_cor3m <- ggplot(df_clean, aes(x = date, y = close/100)) +
  scale_x_date(
@@ -59,8 +66,9 @@ pl_cor3m <- ggplot(df_clean, aes(x = date, y = close/100)) +
     axis.text = element_text(color = "black"),
     axis.ticks = element_line(color = "black"),
   )
-
-ggsave('C:/Users/bramv/Documents/Universiteit/2025-2026/Master thesis/Graphs/COR3M.png', 
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+setwd("Figures")
+ggsave('COR3M.png', 
        plot=pl_cor3m,
        width = 6.5,
        height = 3.25,

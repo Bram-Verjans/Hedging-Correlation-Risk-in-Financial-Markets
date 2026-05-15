@@ -1,3 +1,11 @@
+#------------------------- General Purpose -------------------------
+# This file computes the implied correlation over moneyness levels
+# to support section 3.3.2 of the thesis.
+# To obtain the output necessary for other files, run this script twice
+# using,
+#   maturity = 30 and
+#   maturity = 90.
+
 library(lubridate)
 library(ggplot2)
 library(dplyr)
@@ -7,8 +15,7 @@ library(tidyr)
 #Input: Change maturity between 30 and 90 days to obtain the results from the paper.
 #-------------------------
 
-
-maturity = 90
+maturity = 30
 months = c("1","2","3","4","5","6","7","8","9","10","11","12")
 years = c("2008","2009","2010")
 
@@ -17,7 +24,7 @@ years = c("2008","2009","2010")
 #-------------------------
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-setwd("../Data loader")
+setwd("../3. Data loader")
 source("Loading Data.R")
 
 #------------------------- 
@@ -53,12 +60,9 @@ strike_counts <- data_cleaned %>%
   group_by(security_ID, quote_date, expiration) %>%
   summarize(n_strikes = n_distinct(strike_price),.groups = "drop")
 
-strike_counts
-  
-
-#-----------------------------------------------------------------------------
+#-------------------------
 #Step 2: Interpolating implied volatilities (IV) across moneyness and maturities
-#-----------------------------------------------------------------------------
+#-------------------------
 
 #Step 2.1: 
 # Create a new dataset with the closest expiration slices to the given maturity (M) (in our example 30 or 90 days). Both under and over the given maturity. 
@@ -74,7 +78,7 @@ data_closest_maturities_detail <- data_cleaned %>%
   filter(expiration == Tshort | expiration == Tlong) %>%
   ungroup()
 
-#Step 2.1.3: Pivot the dataset so that each row represents a unique security, date, and moneyness level, with separate columns for IVshort (T < M) and IVlong (T > M).
+#Step 2.1.2: Pivot the dataset so that each row represents a unique security, date, and moneyness level, with separate columns for IVshort (T < M) and IVlong (T > M).
 # In case a moneyness is defined for only one expiration, the IV will be NA for the other expiration. 
 
 data_closest_maturities <- data_closest_maturities_detail %>%
@@ -84,8 +88,6 @@ data_closest_maturities <- data_closest_maturities_detail %>%
     names_from = time_type,
     values_from = implied_volatility
   )
-
-
 
 #Step 2.2
 # Now we can interpolate across strikes to fill in a grid of given strikes (moneyness)
@@ -99,8 +101,6 @@ data_to_interpolate <- merge(data_to_interpolate, data.frame(moneyness_grid =mon
 # 2.2.3 Join the market data to your grid first
 data_to_interpolate <- data_to_interpolate %>%
   left_join(data_closest_maturities, by = c("security_ID", "quote_date"))
-
-data_to_interpolate
 
 # 2.2.4 Now interpolate using the columns already present in your table
 data_interpolated_int <- data_to_interpolate %>%
@@ -116,11 +116,9 @@ data_interpolated_int <- data_to_interpolate %>%
     .groups = "drop"
   )
 
-data_interpolated_int
-
-#---------------------------------------------------------------------
+#-------------------------
 #Step 3: We now interpolate over the expiration to get the IV's for the given maturity (M)
-#---------------------------------------------------------------------
+#-------------------------
 
 #We interpolate total variance: T sigma(T)^2
 data_interpolated <- data_interpolated_int %>%
@@ -142,31 +140,31 @@ data_interpolated <- data_interpolated_int %>%
   )
   )
 
-#--------------------------------------------------------------------------------------------------
+#-------------------------
 #Step 4: The stock price comprising the index DOJ are loaded, and the rescaled weights are computed
-#--------------------------------------------------------------------------------------------------
+#-------------------------
 
 
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-setwd("../1. Raw option data/2008")
+setwd("../2. Raw option data/2008")
 
 #load the weights from the received option data
 df_divisor_DJIA = as.data.frame(read.csv2("weights_2008.csv", sep=",", header = T, dec = "."))
 
 df_divisor_DJIA <- df_divisor_DJIA %>% mutate(quote_date = as.Date(quote_date, origin = "1899-12-30"))
 
-
+#Calculate rescaled weights
 df_individual  <- data_interpolated %>%
   left_join(df_divisor_DJIA, by = c("quote_date","security_ID")) %>%
   filter(security_ID != 102456) %>%  
   group_by(quote_date, moneyness_grid) %>%
-  mutate(weight_rescaled = close_price/sum(close_price)) %>% #rescaled weights: in case security_ID is missing
+  mutate(weight_rescaled = close_price/sum(close_price)) %>% 
   ungroup()
 
 
-#------------------------------------------------------------
+#-------------------------
 #Step 5: Computing the implied correlation for each moneyness
-#------------------------------------------------------------
+#-------------------------
 
 df_numerator_sum <- df_individual %>%
   group_by(quote_date, moneyness_grid) %>%
@@ -183,9 +181,9 @@ df_index_iv <- data_interpolated %>%
   select(quote_date, moneyness_grid, IV_maturity)
 
 
-#------------
+#-------------------------
 # Step 6: Final table
-#------------
+#-------------------------
 
 # Step 6.1: Calculate Model-Free Implied Correlation (rho_iv)
 # We use the portfolio variance identity: Var(Index) = Sum(wi^2 * s_i^2) + Sum(wi*wj*si*sj*rho)
@@ -208,8 +206,10 @@ df_general_trend_plot <- df_implied_correlations %>%
   ungroup() %>%
   filter(flag == 1)
 
+#-------------------------
+# Step 6: Plotting the correlation skew.
+#-------------------------
 
-#Step 6.3: Data exploration: the correlation skew over moneyness
 legend_breaks <- as.numeric(as.Date(c("2008-01-01", "2009-01-01", "2010-01-01")))
 legend_limits <- as.numeric(as.Date(c("2008-01-01", "2010-12-31")))
 
@@ -240,8 +240,8 @@ pl2 <- ggplot(df_general_trend_plot,
   )
 
 print(pl2)
-# output
 
+# output
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 setwd('Figures')
 file_name <- paste0("Figure8_Implied_correlations_vs_moneyness_and_time_M", maturity, ".png")
@@ -254,9 +254,8 @@ ggsave(file_name,
        dpi = 300       # High resolution for printing
 )
 
-
 #--------------------------------------------
-# Plotting correlation skew for specific date
+# EXTRA: Plotting correlation skew for specific date
 #--------------------------------------------
 df_rho_skew_date <- df_implied_correlations %>% filter(quote_date == as.Date('2008-07-21'))
 
@@ -296,7 +295,7 @@ write.table(df_rhoIV_ATM, output_name, row.names = FALSE,sep=";",dec=",")
 
 
 #--------------------------------------------
-# Extra: plot
+# Extra: plot of the implied correlation over time
 #--------------------------------------------
 
 ggplot(df_rhoIV_ATM, aes(x = quote_date)) +

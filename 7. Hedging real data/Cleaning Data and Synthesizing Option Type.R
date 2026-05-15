@@ -1,5 +1,7 @@
-#==============================================================================================================
-# PURPOSE: computing the P&L of a delta-hedging strategy
+#------------------------- General Purpose -------------------------
+# computing the P&L of a delta-hedging strategy
+
+#-------------------------      Steps      -------------------------
 # STEP 0: loading/preparing data
 # STEP 1: creating dataframe: df_TandTp with each record a liquid option, its Greeks and price the current and next trading day.
 #         It includes theoretical P&L of only delta-hedging only this option
@@ -7,7 +9,14 @@
 #         Example (straddles): for a portfolio of a straddle, shares_option = 1 for the ATM call and put option and 0 elsewhere. 
 #         df_TandTP can also be used to define log-contracts
 # STEP 3: 
-#================================
+
+#------------------------- !! Important !! -------------------------
+# To obtain all necessary data for the following scripts,
+# Run this entire script for the following scenarios:
+# - Maturity = 30 and 90,
+# - greek_hedge = 'gamma' and 'vega',
+# - delta_type = 'delta' and 'delta_sticky',
+# A total of 8 scenarios should be ran.
 
 library(lubridate)
 library(ggplot2)
@@ -27,18 +36,16 @@ maturity = 30
 #choose hedging strategy: gamma or vega, with vega the trade at the end of the thesis using vega-hedging
 greek_hedge = "gamma" 
 #To use normal delta fill in 'delta', for a sticky delta use 'delta_sticky'
-#To hedge using sticky delta: check comment at line 313
 deltatype = 'delta_sticky'
 months = c("1","2","3","4","5","6","7","8","9","10","11","12")
 years = c("2008","2009","2010")
-
-setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 #-------------------------------
 # Step 0: loading/preparing data
 #-------------------------------
 
 #the following program loads datasets: data, weights, zcb
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 setwd("../Data loader")
 source("Loading data.R")
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
@@ -65,7 +72,9 @@ df_interest_rate <- zcb %>%
 #----------------------------------------------------------------------------------------
 #Step 0.2: Determining forward prices: using clean data set with ATM call and put options
 #----------------------------------------------------------------------------------------
-
+#To check
+#Step 0.2.1: Define helper functions to extract the European Call (EC) 
+#and European Put (EP) option prices.
 EP_no_warning <- function(midquote,delta){
   x = midquote[delta<0]
   return(ifelse(length(x)>0,first(x),NA))
@@ -74,7 +83,8 @@ EC_no_warning <- function(midquote,delta){
   x = midquote[delta>0]
   return(ifelse(length(x)>0,first(x),NA))
 }
-    
+
+#Step 0.2.2: Calculate forward prices using put-call parity    
 df_forward <- data_cleaned %>%
   left_join(df_interest_rate, by = c("quote_date")) %>%
   group_by(quote_date,security_ID,expiration,strike_price,interest_rate) %>%
@@ -191,8 +201,7 @@ df_TandTp$PNL_theoretical_w_vega <- PNL_theoretical_w_vega_f(df_TandTp$gamma,df_
 # For example: a straddle will have a 1 for the ATM call and put and 0 elsewhere
 # Next, we collapse each quote_date and security_ID to one line representing the synthesized option, making use of linearity of the Greeks and theoretical P&L
 
-#------------------------- code for straddle options -------------------------
-#We focus for now on straddle options: we use the strike so that the gamma of the resulting option is maximized. 
+#For straddle options, we use the strike so that the gamma of the resulting option is maximized. 
 #when we are using the Black-Scholes gamma: this is simple the put and call closest to the forward price
 
 df_main_int <- df_TandTp %>%
@@ -233,7 +242,7 @@ synthetic_option_f <- function(security_ID,delta, strike,Kmin,Kmax,option_type)
 
 #source("C:/Users/bramv/Documents/Universiteit/2025-2026/Master thesis/R programmas/Hedging real data/Realized correlation lagged.R")
 #Loaing ATM implied correlations used for vega trade
-df_implied_cor <-as.data.frame(read.csv2(paste0("../Implied correlation per moneyness/Data/",maturity,"/Implied correlation per moneyness_M",maturity," - ATM.csv"),sep=";", dec=","))
+df_implied_cor <-as.data.frame(read.csv2(paste0("../6. Implied correlation per moneyness/Data/",maturity,"/Implied correlation per moneyness_M",maturity," - ATM.csv"),sep=";", dec=","))
 df_implied_cor <- df_implied_cor %>% mutate(quote_date = as.Date(quote_date))
 df_implied_cor <- df_implied_cor %>% rename(rho_estimate = rho_iv)
 
@@ -340,8 +349,6 @@ df_dispersion_portfolio <- df_main_collapsed %>%
 # Step 4: Computing P&L of hedging strategy
 #------------------------------------------
 
-#df_PNL_old <- df_PNL
-
 df_PNL <- df_dispersion_portfolio %>%
   group_by(quote_date) %>%
   summarize(PNL_realized = sum(shares_option*(O_Tp-O_T)+shares_stock*(S_Tp-S_T))+first(shares_bank*((1+interest_rate)^(first(dt))-1)),
@@ -403,8 +410,8 @@ assign(
   df_Gamma_over_O
 )
 
-mean(df_Gamma_over_O_30$ratio)
-mean(df_Gamma_over_O_90$ratio)
+#mean(df_Gamma_over_O_30$ratio)
+#mean(df_Gamma_over_O_90$ratio)
 
 ggplot(get(paste0("df_Gamma_over_O_", maturity)), aes(x = quote_date)) +
   # Realized P&L Line
