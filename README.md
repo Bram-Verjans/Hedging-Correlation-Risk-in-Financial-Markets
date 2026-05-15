@@ -3,6 +3,6 @@ This repository is made as a central location where the code can be found to rec
 
 
 ## General Workflow
-1. 1. Package installer/ Package Installer.R
+1. '1. Package installer/ Package Installer.R'
 - inputs:
 - outputs:
